@@ -1,0 +1,14 @@
+[
+  {
+    "point": "z",
+    "max_observable_difference": 2.008115895790752e-14
+  },
+  {
+    "point": "x",
+    "max_observable_difference": 9.443834603217738e-15
+  },
+  {
+    "point": "xz",
+    "max_observable_difference": 1.9220736113823023e-14
+  }
+]

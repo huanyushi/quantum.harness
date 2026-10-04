@@ -1,0 +1,4 @@
+# Rebuildable binary checkpoints and rendered raster preview.
+results/**/*.jls
+figures/*.png
+__pycache__/
