@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330">
+<rect width="760" height="330" fill="white"/>
+<g font-family="sans-serif" font-size="14" fill="#222">
+<text x="35" y="28">M2 stalled state: exact 2x2 torus, one SU sweep</text>
+<text x="35" y="49">Energy per edge spin (finite diagnostic, not infinite-plane energy)</text>
+<path d="M75 222.85714285714283 H685" stroke="#ddd"/>
+<text x="8" y="227.85714285714283">-0.800</text>
+<path d="M75 179.99999999999994 H685" stroke="#ddd"/>
+<text x="8" y="184.99999999999994">-0.795</text>
+<path d="M75 137.14285714285705 H685" stroke="#ddd"/>
+<text x="8" y="142.14285714285705">-0.790</text>
+<path d="M75 94.28571428571416 H685" stroke="#ddd"/>
+<text x="8" y="99.28571428571416">-0.785</text>
+<polyline points="75.00,210.11 150.00,101.33 225.00,210.11 300.00,101.33 375.00,210.11 450.00,101.33 525.00,210.11 600.00,101.33 675.00,210.11" fill="none" stroke="#215caa" stroke-width="2.5"/>
+<circle cx="75" cy="210.11058696091285" r="4" fill="#215caa"/>
+<text x="60" y="268">start</text>
+<circle cx="150" cy="101.33366969874066" r="4" fill="#215caa"/>
+<text x="135" y="268">A11</text>
+<circle cx="225" cy="210.1105869617398" r="4" fill="#215caa"/>
+<text x="210" y="268">B11</text>
+<circle cx="300" cy="101.33366969956475" r="4" fill="#215caa"/>
+<text x="285" y="268">A12</text>
+<circle cx="375" cy="210.11058696257248" r="4" fill="#215caa"/>
+<text x="360" y="268">B12</text>
+<circle cx="450" cy="101.33366970038983" r="4" fill="#215caa"/>
+<text x="435" y="268">A21</text>
+<circle cx="525" cy="210.11058696331378" r="4" fill="#215caa"/>
+<text x="510" y="268">B21</text>
+<circle cx="600" cy="101.33366970112922" r="4" fill="#215caa"/>
+<text x="585" y="268">A22</text>
+<circle cx="675" cy="210.11058696405036" r="4" fill="#215caa"/>
+<text x="660" y="268">B22</text>
+<text x="75" y="300">Star compression raises energy; plaquette gates restore it.</text>
+</g></svg>

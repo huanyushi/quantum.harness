@@ -1,0 +1,17 @@
+run,initialization,D,chi,hx,hz,status,accepted,energy,energy_error,mx,mz,gradnorm,reasons
+analytic-anchor-suite/x,analytic-anchor-uniform,2,8,0.1,0.0,stationary,True,-1.0025222763379713,1.7583910276730563e-06,0.0508993012860979,-6.938893903907228e-18,3.5836434232124684e-08,
+analytic-anchor-suite/xz,analytic-anchor-uniform,2,8,0.1,0.1,armijo_failed,False,-1.0050340781978913,1.063241260412795e-05,0.050493806225226846,0.05047696985829349,168817.4390751397,optimizer_not_stationary;energy_benchmark
+analytic-anchor-suite/z,analytic-anchor-uniform,2,8,0.0,0.1,armijo_failed,False,-1.0025158585004033,8.17622859572431e-06,-5.143659614100293e-18,0.0505604767476394,4.930797794008284,optimizer_not_stationary
+analytic-anchor-suite/zero,analytic-anchor-uniform,2,8,0.0,0.0,stationary,True,-1.0000000000000002,-2.220446049250313e-16,4.275979971966858e-18,0.0,4.1454151130818425e-17,
+fresh-unrolled-suite01/x,analytic-anchor-uniform,2,8,0.1,0.0,stationary,True,-1.002522276337075,1.7583919240671264e-06,0.05089970016689139,-2.022687572988957e-15,3.936407416123646e-06,
+fresh-unrolled-suite01/xz,analytic-anchor-uniform,2,8,0.1,0.1,stationary,True,-1.0050348287951947,9.881815300705199e-06,0.05083080259967411,0.05057162397702836,2.4387231306603103e-06,
+fresh-unrolled-suite01/z,analytic-anchor-uniform,2,8,0.0,0.1,stationary,True,-1.0025158645070713,8.170221927672472e-06,5.0759682187572926e-14,0.05063885580097447,1.6828113944667036e-06,
+fresh-unrolled-suite01/zero,analytic-anchor-uniform,2,8,0.0,0.0,stationary,True,-1.0000000000000002,-2.220446049250313e-16,4.275979971966858e-18,0.0,4.045013771869655e-17,
+local-zero-session,random,2,4,0.0,0.0,budget,False,-0.7499993645299166,0.25000063547008344,3.622403718014777e-05,-0.24999709267199993,0.0001290654514411004,optimizer_not_stationary;energy_benchmark;mx_benchmark;mz_benchmark;conserved_sector
+uniform-suite/x,random-uniform,2,8,0.1,0.0,budget,False,-0.5005439084714244,0.5019801262575746,6.664531163280696e-05,-0.0008020141579088702,0.007925299314579734,optimizer_not_stationary;energy_disagreement;energy_benchmark;mx_benchmark;mz_benchmark;conserved_sector
+uniform-suite/xz,random-uniform,2,8,0.1,0.1,budget,False,-0.5027241561139404,0.502320554496555,0.0001917756905550072,0.05266896021894238,0.003517455877060149,optimizer_not_stationary;energy_benchmark;mx_benchmark;mz_benchmark
+uniform-suite/z,random-uniform,2,8,0.0,0.1,budget,False,-0.5027210466270171,0.49980298810198187,0.0002704329286275925,0.05493787756886874,0.05937971268361556,optimizer_not_stationary;energy_benchmark;mx_benchmark;mz_benchmark;conserved_sector
+uniform-suite/zero,random-uniform,2,8,0.0,0.0,budget,False,-0.500564859307587,0.499435140692413,0.00012205814653246105,0.00013735986757315577,0.008996366670204715,optimizer_not_stationary;contraction_failed;missing_chi_check;energy_benchmark;mx_benchmark;mz_benchmark;conserved_sector;zero_field_stabilizers
+unrolled-repair01/x,checkpoint-continuation,2,8,0.1,0.0,stationary,True,-1.0025222763379713,1.7583910276730563e-06,0.05089930128609794,2.7755575615628914e-17,3.580387179030781e-08,
+unrolled-repair01/z,checkpoint-continuation,2,8,0.0,0.1,stationary,True,-1.0025158645074383,8.17022156063274e-06,4.24182149500983e-13,0.0506394213849643,1.536229486199933e-07,
+unrolled-repair02/xz,checkpoint-continuation,2,8,0.1,0.1,stationary,True,-1.005034828795574,9.881814921453014e-06,0.050830793213318445,0.050571570924082786,7.505820607670595e-07,
