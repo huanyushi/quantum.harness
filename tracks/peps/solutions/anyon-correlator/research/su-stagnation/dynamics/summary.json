@@ -1,0 +1,22 @@
+{
+  "max_single_step_K_error": 1.2212453270876722e-15,
+  "max_trajectory_K_error": 5.051514762044462e-14,
+  "legacy_energy_reference": "m2-su-audit/REPORT.md, infinite-network table",
+  "legacy_prediction_energy": -0.7533036457706742,
+  "legacy_measured_energy": -0.7533036457686739,
+  "legacy_energy_error": 2.0002888234671445e-12,
+  "zero_step_limit_K": 0.27465307216702745,
+  "zero_step_limit_B": 0.5,
+  "zero_step_limit_energy": -0.75,
+  "trajectory_count": 8,
+  "branch_cases": 4,
+  "source_hashes_at_analysis": {
+    "core.jl": "336c35baf1b0fd4999e070125a1a659489a152e417746b7d5ece81cc30bc89cc",
+    "branch_check.jl": "8e5be33e581aedcb15596ec688b4acfe961eaaf1d71a859e29d5e7c9485c0591",
+    "followup.jl": "d0993a6f38facbe1a665a4f109a2d625165016bc629fe681feece758378ae809",
+    "legacy_check.jl": "718ca80b14ccf88e99347197f5618a461a9b09380c2f257a7dde97652f3697bb",
+    "reproduce.jl": "1a1f91302b06e4daf215e5ac0e87bb83ea7ab3801adea96ebc8bff15c003973d",
+    "tests.jl": "c480d66434430684d3225850dade389a63845cf4a4bac730b5d0fa9d15329e26",
+    "pilot.jl": "4c495898e0f8b66741e2d717a1ad32f7b6ac676035cb0b5ba61068359f8f8a8a"
+  }
+}

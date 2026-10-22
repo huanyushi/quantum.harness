@@ -1,46 +1,15 @@
-# Independent D=2, d=2 toric-code update audit
+# Simple-update 类算法
 
-**Result:** The old random-start SU stall reproduces. A new split-network path-SU also fails on the tested trajectory. Keeping the plaquette loop in a local **loop/cluster update** reaches the ground state from the same random tensors: **e = −0.99999999991334**, max stabilizer error **4.43×10⁻¹⁰**, χ=16.
+七月和十月的 SU 实现统一放在这里，按张量表示和更新规则区分。当前求基态主要采用 **loop/cluster update**：使用 diagonal λ 近似外环境，保留完整 plaquette 环进行局部拟合。它与开放路径截断的 SU 不同，也不是采用完整二维环境的 full update。
 
-This is not evidence that ordinary path-SU converges, nor proof of a bug in the old implementation. The algorithm distinction matters. See **[REPORT.md](REPORT.md)** for the conclusion and limitations.
+| 目录 | 实现 | 结果与用途 |
+|---|---|---|
+| [merged/](merged/README.md) | 七月一般 merged PEPS，L 形三站点 SU | 随机 seed1 停在 e≈−0.7533；用于重放旧停滞与门检查 |
+| [split/](split/README.md) | 十月 D=2 V/P/λ；同一个 star 更新下比较 path-SU 和 loop/cluster | path 在所测轨迹未成功；loop 从同一随机态成功得到零场基态 |
+| [loop/](loop/README.md) | 一般 D 的 loop 实现，含磁场门 | 三个弱场点、D=2/3/4 的结果和限制；当前有限场主要程序 |
 
-The update state always contains separate rank-4 V tensors, rank-3 P tensors (one d=2 physical leg), and explicit D=2 λ on every V–P connection. The only physical control is the exact state. Physical legs are fused to d=4 **only for CTMRG measurement**, without approximation.
+`split/core.jl` 中是共同网络、star 和 path 更新，`split/loop.jl` 中是闭环 ALS。两种方法共享 state、star 和测量，通过 `split/run.jl --plaquette=path|loop` 选择。有限场一般 D 版位于 `loop/`。
 
-## Reproduce
+所有计算仍采用 H=−ΣA−ΣB−hₓΣX−h_zΣZ，J=1、Pauli convention、无限方格边自旋。零场结果见 [M2](../M2_REPORT.md)，有限场结果见 [M3](../M3_REPORT.md)。同一 D 下，merged 和 split 允许的张量不同，结果差异不能仅归因于求解器名称。
 
-From the repository root, with the existing `julia-env` (Julia 1.12.6, PEPSKit 0.8.0, TensorKit 0.16.5):
-
-```bash
-OPENBLAS_NUM_THREADS=1 julia -O1 --project=julia-env tracks/peps/solutions/anyon-correlator/simple-update/reproduce.jl
-```
-
-This reruns the recorded cases and overwrites their generated files under `results/`. First-call Julia compilation dominates the runtime; the updates themselves take seconds locally.
-
-To run only the successful random-start calculation plus exact control:
-
-```bash
-OPENBLAS_NUM_THREADS=1 julia -O1 --project=julia-env tracks/peps/solutions/anyon-correlator/simple-update/run.jl --init=both --plaquette=loop --seed=1 --schedule=0.05:200,0.01:200,0.002:200 --measure-every=40 --out=tracks/peps/solutions/anyon-correlator/simple-update/results/loop-seed1
-```
-
-Implementation checks and plot generation:
-
-```bash
-julia --project=julia-env tracks/peps/solutions/anyon-correlator/simple-update/tests.jl
-.venv/bin/python tracks/peps/solutions/anyon-correlator/simple-update/plot.py
-```
-
-## Files
-
-| File | Role |
-|---|---|
-| `core.jl` | Independent Γ–λ storage, star HOSVD, plaquette path-SU, measurement blocking |
-| `loop.jl` | Closed-loop ALS compression with diagonal external λ and internal cavity-message gauge |
-| `measure.jl` | Independent operator construction and infinite-lattice CTMRG measurements |
-| `run.jl` | Random/exact runs, incremental CSV and binary checkpoints |
-| `final_audit.jl` | χ=8/16 checks, exact-control contraction diagnosis, original M2 replay |
-| `reproduce.jl` | Consolidated single-process reproduction |
-| `tests.jl` | Compact gate, weight, reconstruction and loop-fit checks |
-| `results/final-audit/audit.toml` | Full final stabilizers and verification results |
-| `figures/convergence.svg` | Recorded random-start trajectories |
-
-No old M2 numerical code is imported by the new update or measurement implementation. `final_audit.jl` imports the old implementation in a separate module **only to replay it**.
+旧 SU 停滞原因的专题研究单独放在 [research/su-stagnation/](../research/su-stagnation/README.md)。

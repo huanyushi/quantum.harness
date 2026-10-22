@@ -1,342 +1,103 @@
-# PLAN.md — anyon-correlator
+# Toric Code 基态与任意子转移矩阵谱：整体研究计划
 
-> **Living document.** This plan is subject to change at any time, depending on the
-> progress of the actual work and problems encountered. Amendments are made by
-> discussion, then recorded here with the date.
+更新日期：2026-10-23。算法实现分别放在 `simple-update/`、`ad/`，零场和有限场结果见 `M2_REPORT.md`、`M3_REPORT.md`。
 
-Challenge: [issue #50](https://github.com/QuantumBFS/quantum.harness/issues/50) — Numerical computation of anyon correlators from PEPS
-Team: anyon-correlator — Huanyu Shi (KITS-UCAS)
-Track: `peps` · Registration: PR #185 · Branch: `challenge/peps-anyon-correlator`
-Code: `tracks/peps/solutions/anyon-correlator/` · Data/figures: `tracks/peps/results/<run>/` (gitignored)
+**整体顺序：精确基准 → 零场数值基态 → 有限场数值基态 → 显式虚拟 Z₂ 约束及验证 → transfer matrix → spectrum 与 sectors。** 基态求解以 loop/cluster update 为主，AD 作为精度不足或优化失败时的备用和比较方法。任意子关联函数与关联长度是其后的物理目标。
 
-## 1. Goal
+## 模型和计算约定
 
-Build an iPEPS workflow that computes anyon correlators Cₑ(r), Cₘ(r) of the toric code
-in magnetic fields, extracts the correlation lengths ξₑ, ξₘ from the spectra of the
-ordinary and flux-twisted double-layer transfer operators, and tracks them across the
-field-driven anyon-condensation transition along one production-quality field path.
+```text
+H = −Σₛ Aₛ − Σₚ Bₚ − hₓΣᵢXᵢ − h_zΣᵢZᵢ
+Aₛ = ∏star X，Bₚ = ∏plaquette Z，Jₑ = Jₘ = 1
+```
 
-Hamiltonian (issue convention):
+X、Z 为 Pauli matrices，无额外 1/2。物理自旋位于无限平方晶格的边上，每条边 d=2。V 位于顶点、P 位于边上；2×2 重复单元含 4 个 V、8 个 P 和 16 条 V–P 连接。每条连接带一个 λ。只有表示或测量需要时，才将 V 与其 east/north 两个 P 精确合并成一个物理维数为 4 的 composite PEPS 张量。
 
-    H = −Jₑ Σₛ Aₛ − Jₘ Σₚ Bₚ − hₓ Σᵢ Xᵢ − h_z Σᵢ Zᵢ ,     Jₑ = Jₘ = 1
+每个顶点对应两个物理自旋。能量统一按边自旋报告：
 
-## 2. Conventions
+```text
+e = E/N = −(mean⟨Aₛ⟩+mean⟨Bₚ⟩)/2 − hₓmₓ − h_zm_z
+零场：e₀=−1；每 composite site 为 −2；2×2 cell 为 −8
+```
 
-- **C1 Hamiltonian.** Exactly as above; Jₑ = Jₘ = 1 sets the energy unit.
-- **C2 Operators.** Aₛ = ∏_{i∈s} Xᵢ (star, X-type); B_p = ∏_{i∈p} Zᵢ (plaquette, Z-type).
-- **C3 Lattice and unit cell.** Square lattice of vertices; spin-½ on every *edge*.
-  Unit cell = one **composite site**: a vertex together with its two outgoing edges
-  (east and north) → **2 physical spins per composite site** (fused dim-4 leg).
-  **One PEPS tensor per composite site** (the vertex simplex V and the two edge
-  projection tensors P_E, P_N contracted — the split V/P network is the parent
-  construction, see §4.2 note). Stored as a **(2,2) supercell** (4 composite sites =
-  8 physical spins) for Hamiltonian construction and finite-cell diagnostics; the
-  completed M2 calculation ties the same tensor across all four positions. Stars are
-  centered on vertices, plaquettes on faces; both are **3-site L-shaped terms** on the composite
-  lattice: star (r,c) = {E(r,c), E(r,c−1), N(r,c), N(r+1,c)}, plaquette (r,c) =
-  {E(r,c), E(r−1,c), N(r,c), N(r,c+1)} — incidence identical to M1's ED construction.
-- **C4 Environment contraction.** iPEPS in the thermodynamic limit. Default: CTMRG
-  (PEPSKit). M2 uses χ=4 for the broad optimization and χ=8 near the ground state,
-  with a fresh χ=8 environment as a sensitivity check. Boundary-MPS / VUMPS fixed
-  points (MPSKit; arXiv:1810.07006) remain a future cross-check for transfer-sector
-  work in M5, not an M2 requirement. Finite periodic tori (2×2, optional 3×3) serve
-  only as ED references.
-- **C5 (g, α) anyon sectors.** See §3–§4. Provisional labeling
-  **1 = (0,+), e = (0,−), m = (1,+), ε = (1,−)**, subject to V1/V2 verification (§5).
-- **C6 Ground-state sector.** In the future symmetry-preserving M3/M5 workflow, iPEPS
-  converges to one topological sector; we accept and record it (initialization, seed),
-  we do not control it. The dense M2 calibration does not assign a virtual sector.
-- **C7 Virtual-ℤ₂ symmetry — exact throughout the sector-resolved production workflow.** See §4 for
-  the four required distinctions. The local PEPS tensors remain **exactly virtual-ℤ₂ symmetric
-  (intertwiners) throughout the sector-resolved M3 refinement and later production**:
-  random initialization, simple
-  update (or full update), AD `fixedpoint` optimization, and adiabatic field
-  continuation. This is an exact production ansatz constraint so that the ordinary and
-  twisted transfer operators retain well-defined (g, α) sectors. The symmetry pattern
-  of the transfer-matrix **boundary fixed points is never imposed** (§4.4). The
-  completed M2 optimization is an explicit calibration stage: one
-  dense/unconstrained ComplexF64 `D=2` tensor was tied across the `(2,2)` cell and
-  optimized from random values to validate the AD/environment pipeline. The explicit
-  2026-07-30 M3 feasibility instruction extended this dense tensor along `(0,h_z)` for
-  one bounded coarse pass; that pass is not a sector-resolved production state and did
-  not meet M3 production acceptance. Exact virtual symmetry remains required before M5.
-- **C8 Normalization.** Energies **per spin**, N = number of edge spins = 2 per unit
-  cell. h=0 anchor: E₀/N = −(Jₑ+Jₘ)/2 = −1. Correlators normalized by the ⟨ψ|ψ⟩
-  network value.
-- **C9 Field path.** The first M3 feasibility pass uses the `(0,h_z)` axis,
-  `h_z ∈ [0,0.5]`, dense near `h_z,c ≈ 0.328`. The model is self-dual under
-  stars ↔ plaquettes with hₓ ↔ h_z, so the original `(hₓ,0)` MVP has identical
-  physics. The diagonal hₓ = h_z (multicritical point 0.418(2), Wu–Deng–
-  Prokof'ev, PRB 85, 195104, Fig. 17) is a stretch goal, out of MVP scope.
-- **C10 Verification anchors.** h_c(hₓ,0) ≈ 0.3285 (3D-Ising; Trebst 2007, Dusuel 2011,
-  Wu 2012); diagonal multicritical 0.418(2); Duivenvoorden 2017 (PRB 95, 235119) for
-  qualitative ξ_a behavior and boundary-fixed-point diagnostics.
+张量可以在四个位置独立变化，也可以平移共享一组参数。对称性分别记录初态的结构和优化时施加的虚拟约束。D 是张量连接维数，χ 是环境维数；主计算采用无限平面，有限 torus 和 cylinder 用于辅助检查。
 
-## 3. Transfer operators, sectors, and anyon correlators
+## 1. 用精确解建立 benchmark
 
-**Ordinary (untwisted) transfer operator** 𝕋 ≡ 𝕋₍₀₎: row-to-row (and column-to-column)
-double-layer transfer operator, local tensor Σₚ Tᵖ ⊗ T̄ᵖ, virtual bond dimension D².
+**状态：零场模型与局域观测量检查已完成；后续 transfer/sector 的解析检查仍待开展。**
 
-**Flux-twisted transfer operator** 𝕋₍₁₎: 𝕋 with a virtual-Z string threaded along the
-transfer direction (a seam of (−1)^l insertions on the virtual bonds; the seam position
-is a gauge choice, movable by the pulling-through relations, §4.3).
+解析基态采用 parity V 和 X-basis copy P：
 
-**Sector-resolved (mixed) operators** 𝕋₍g,α₎: each 𝕋₍g₎ commutes with the global virtual
-𝒵 string (§4.2–4.3), so its spectrum decomposes into parity blocks α = ±. The four
-(g, α) sectors — with twist and parity combined ("mixed") — are
+```text
+V[n,e,s,w] = δ(n⊕e⊕s⊕w,0)
+P[p,a,b] = δ(a,b)(−1)^(p a)/√2
+T[pE,pN,n,e,s,w] = (−1)^(pE·e+pN·n) δ(n⊕e⊕s⊕w,0)/2
+```
 
-    1 = (0,+)   e = (0,−)   m = (1,+)   ε = (1,−)      [provisional, §5 V2]
+检查所有稳定子为 +1、每自旋能量为 −1、V/P 收缩与闭式张量相同、物理算符及能量归一化正确。2×2 torus 的 8-spin ED 检查零场 E₀=−8、基态简并度 4、基态空间以上 gap=4，以及有限场对偶关系与大场极限。环面允许的最低激发包含一对稳定子违例，每个代价为 2。
 
-**Eigenvalue selection.** For anyon a = (g, α) with endpoint/string operator S_a on the
-virtual legs, define the endpoint form factor F_a(ν) = ⟨L_ν|S_a|R_vac⟩ over eigenstates
-ν of 𝕋₍g,α₎. Then
+实现与参考值在 `model/`，算符另有独立的逐比特检查。
 
-    λ_a = leading-magnitude eigenvalue of 𝕋₍g,α₎ among eigenstates with F_a ≠ 0
+## 2. 数值求零场基态
 
-— **not** generically a subleading twisted eigenvalue: symmetry can force F_a = 0 on
-the leading state, in which case the next eigenstate with nonzero form factor governs.
+**状态：已成功。主要方法采用十月的 loop/cluster update。**
 
-**Correlators.** ξ_a = 1/ln|λ₀/λ_a| (λ₀ = vacuum eigenvalue of 𝕋₍₀,+₎);
-C_a(r) ∼ |F_a|² |λ_a/λ₀|ʳ asymptotically; cross-checked against explicit two-endpoint
-insertions at separation r where accessible.
+`simple-update/split/` 保留共同网络下的两种 plaquette 更新：path-SU 的开放路径截断，以及闭合八张量环的 loop/cluster ALS。共同 star 更新使用四臂 HOSVD。后者用局部 diagonal λ 近似外环境，不属于使用完整二维环境的 full update。
 
-## 4. Symmetry architecture — four distinct notions (do not conflate)
+随机 seed=1、D=2 的 loop 计算在 120 轮达到 e≈−0.999999999913，最大稳定子误差约 4.42×10⁻¹⁰；χ=8/16 一致。零场检查标准为 |e+1|≤10⁻⁶，所有 |⟨Aₛ⟩−1|、|⟨Bₚ⟩−1|≤10⁻⁶，同时检查环境收缩。
 
-1. **ℤ₂-graded tensor storage.** A data-layout choice: TensorKit `Z2Irrep`-graded
-   spaces (V = Z2Space(0⇒1, 1⇒1) at D=2), block-sparse storage by charge. Graded
-   storage alone does not imply any physical symmetry.
-2. **Exact virtual-ℤ₂ invariance of the local tensor.** A constraint on tensor
-   *values*: each local tensor is an exact ℤ₂ intertwiner — nonzero components only
-   where total leg charge is conserved. For the exact toric-code tensor (amended at
-   M2): the composite rank-6 tensor
-   T^{pE pN}_{nesw} = (−1)^{pE·e + pN·n} · δ_{n⊕e⊕s⊕w,0} / 2,
-   i.e. the vertex parity simplex with the edge-occupancy copied to the physical
-   spins **in the X basis** (amplitude ⟨p|H|a⟩). Rationale: the naive Z-basis copy
-   (δ_{pE,e}δ_{pN,n}·δ_{parity}) builds the Z-basis *cycle gas* — the toric code
-   with stars↔plaquettes exchanged (⟨Aₛ⟩ = 0 for our H); the X-basis copy builds
-   the cycle gas in the X basis = the cut gas in the Z basis = ∏ₛ(1+Aₛ)|0⟩.
-   Verified: E_cell = −8 and ⟨Aₛ⟩ = ⟨B_p⟩ = 1 to 2e-16 by CTMRG with zero
-   optimization. Maintained exactly through initialization, simple/full update,
-   AD optimization, and field continuation in the symmetry-preserving production
-   route (C7). The dense tied-tensor M2 calibration is the documented exception.
-3. **Pulling-through relations.** The operational content of the symmetry. For the
-   composite rank-6 tensor (amended at M2): Z^{⊗4}·T = T on the virtual legs
-   (virtual invariance), and a virtual Z on a single leg equals a physical Z on the
-   corresponding edge spin (Z_e·T = Z_{pE}·T, Z_n·T = Z_{pN}·T) — a virtual-Z
-   string pulls through a tensor and can be absorbed by physical Z's. Double layer:
-   bra/ket phases cancel, so virtual-Z strings pull through the norm network freely;
-   hence [𝕋, 𝒵] = 0 with 𝒵 the global virtual-Z string, and twist seams are
-   well-defined and movable.
-4. **Symmetry of transfer-matrix boundary fixed points — NOT imposed.** The boundary
-   fixed points (dominant eigenvectors of 𝕋₍g,α₎, MPOs on the virtual legs) may or may
-   not be 𝒵-symmetric. Their symmetry breaking, sector degeneracy, and endpoint form
-   factors are **physical outputs**: unbroken vs broken fixed-point symmetry and the
-   form-factor structure diagnose anyon confinement vs condensation (Duivenvoorden
-   2017). We measure them; we never constrain them.
+旧 merged SU、path-SU 和 merged AD 的结果保留作方法比较。基态求解接下来进入有限场。
 
-## 5. Verification protocol for future sector work
+## 3. 数值求有限场基态
 
-- **V1 (M5 machinery floor, h=0).** Before accepting M5 sector results, use a
-   symmetry-preserving h=0 anchor. In every non-vacuum sector the leading
-   **form-factor-selected** eigenvalue (§3 selection rule) must show |λ/λ₀| below a
-   documented residual floor (ideal fixed point: ξ = 0). The boundary-parity partner
-   of the vacuum — the (0,−) dominant state whose endpoint form factor vanishes — is
-   exempt by construction. The dense M2 state is an optimizer calibration and is not
-   used for this sector test.
-- **V2 (e/m assignment).** Along (hₓ, 0): hₓ anticommutes with B_p = ∏Z, so it
-  condenses plaquette violations — the sector assigned m = (1,+) must show growing ξ
-  while e = (0,−) stays short-ranged. If observed reversed, swap e ↔ m labels for our
-  basis convention and record the swap in run.json.
-- **V3 (optional).** Fusion consistency ε = e × m from the (1,−) sector; sanity only.
-- **Exact symmetry-preserving anchor.** If the h=0 sector structure is unresolvable or
-  M5 requires a cleaner ξ floor, use the analytic ℤ₂-graded toric-code tensor of §4.2
-  (composite rank-6, X-basis copy), validate the sector machinery with it
-  (E_cell = −8 exactly, ideal ξ = 0), and use it as the symmetry-preserving h=0
-  anchor. This is future M3/M5 setup, not part of completed M2.
-- **Dense/unconstrained validation comparison (limited).** One nonsymmetric ComplexF64
-  energy comparison at 1–2 mid-field points, small D, quantifying the exact-ℤ₂ ansatz
-  restriction; recorded in run.json. Never the production path.
+**状态：三个弱场点已有结果，完整磁场路径未完成。**
 
-## 6. Milestones
+先采用 loop/cluster update。弱场基准点为 (0.1,0)、(0,0.1)、(0.1,0.1)，比较 e、mₓ、m_z 和所有位置的稳定子。参考为 Dusuel 等 arXiv:1012.1740v2 补充材料的十阶能量及其磁化导数，使用 e_ours(hₓ,h_z)=2e_paper(hₓ/2,h_z/2)。不同截断阶数的差值用于估计弱场级数的敏感性；临界附近另选比较依据。
 
-### M0 — Stack setup
-- **Purpose:** working Julia tensor-stack.
-- **Tasks:** `make install julia`; `make install pepskit`; `make install mpskit`;
-  smoke test `julia --project=julia-env -e 'using TensorKit, PEPSKit'` and MPSKit equivalent.
-- **Files/outputs:** `julia-env/Manifest.toml` (pinned); smoke-test log.
-- **Acceptance:** both smoke tests load and run a trivial contraction.
-- **Failure/fallback:** precompile/mirror issues → `/setup-julia` (mirror config);
-  version conflicts → pin compatible versions in Manifest.
-- **Depends/status:** none → **done 2026-07-27** — Julia 1.12.6 (juliaup, NJU mirror);
-  TensorKit 0.16.5 + PEPSKit 0.8.0 + MPSKit 0.13.12 + MPSKitModels 0.4.7 in `julia-env`
-  (resolved combo: PEPSKit 0.8.0 requires TensorKit 0.16.x, not 0.17); ℤ₂-graded smoke
-  test passed. TensorKit 0.16 API notes for later milestones: constructor
-  `TensorMap{T}(undef, cod, dom)` (no function-based form); iterate `blocks(t)`, access
-  `block(t, c)`, list `blocksectors(t)`; `@tensor M[a; b]` — the semicolon is required,
-  otherwise all free indices land in the codomain (V⊗V′ vector instead of an
-   endomorphism V→V). `julia-env/Project.toml` records the direct PEPSKit, JLD2, and
-   Zygote dependencies required by the retained M2 scripts.
+弱场实用标准为能量偏差≤10⁻⁵/spin、非零磁化相对偏差≤1%、零参考磁化绝对偏差≤10⁻⁶。局域 Pauli 期望值应在 ±1 内，容差 10⁻⁶。沿 hₓ=0 的目标分支检查 Bₚ≈1，沿 h_z=0 检查 Aₛ≈1。还需明确局部 ALS 拟合、演化步长和环境收缩的停止情况。
 
-### M1 — Hamiltonian + required 2×2 ED unit test
-- **Purpose:** validate term construction independently of any PEPS machinery.
-- **Tasks:** build Aₛ, B_p, field terms; exact diagonalization on the 2×2 periodic
-  torus (8 spins). Required checks: E₀(h=0) = −8; a few (hₓ, h_z) field points;
-  large-field limits: along (hₓ, 0) E₀/N → −hₓ − Jₑ/2 (exact, since
-  [Aₛ, ΣᵢXᵢ] = 0 makes the star part contribute its minimum −NₛJₑ at all hₓ);
-  generic direction E₀/N → −√(hₓ² + h_z²) up to an O(J) first-order shift.
-  Optional (stretch): 3×3 ED (18 spins); TFIM-duality spectrum check along (hₓ, 0).
-- **Files/outputs:** `scripts/ed_checks.jl`; `tests/runtests.jl` (2×2 test);
-  `results/<run>/ed_2x2.csv`.
-- **Acceptance:** unit test passes in seconds and is re-runnable before every later stage.
-- **Failure/fallback:** mismatch → fix sign/factor conventions in the terms; never
-  loosen the test.
-- **Depends/status:** M0 → **done 2026-07-28** — 7/7 gates pass in 1.5 s
-  (`tests/runtests.jl`): operator construction (incidence, involutions, commutation,
-  [Aₛ, ΣX] = 0), E₀ = −8 with degeneracy 4 and gap 4 (gap measured **above the
-  degenerate ground space**, vals[degen+1] − E₀), all ground states stabilized
-  (⟨Aₛ⟩ = ⟨B_p⟩ = 1 to 1e-15), self-duality |ΔE₀| < 1e-14, monotonicity, large-field
-  windows (E₀/N = −5.5125 at (5,0); −7.3538 at (5,5) vs −√50 = −7.0711).
-  CSV: `tracks/peps/results/20260728-114418-ed-checks/ed_2x2.csv`.
+已有 loop 的 D=2 X 单轴、D=3 Z 单轴及双分量态达到弱场目标。Split AD 也在三个点从解析零场或近基态起点达到目标，可作备用。具体结果见 [有限场总结](M3_REPORT.md)。
 
-### M2 — Random initialization to the h=0 ground state
-- **Purpose:** validate random tensor → fixed-point AD → CTMRG → ground-state
-  observables end-to-end against the exact h=0 anchor.
-- **Ansatz:** one random dense ComplexF64 `D=2` tensor copied to all four positions of
-  the `(2,2)` cell. No virtual ℤ₂ constraint and no exact-state initialization.
-- **Tasks:** optimize the shared tensor with fixed-point AD, average the four
-  positional gradients into the tied-tensor tangent direction, use normalized Armijo
-  backtracking, contract with CTMRG at χ=4 for the broad descent and χ=8 near the
-  target, and measure E₀/N plus all site-resolved ⟨Aₛ⟩ and ⟨B_p⟩. Evaluate the exact
-  tensor separately as a stationary code benchmark. Recontract the accepted final
-  tensor from a fresh χ=8 environment to record contraction sensitivity.
-- **Files/outputs:** `scripts/ad_tied_core.jl`, `scripts/ad_tied_gd.jl`,
-  `tests/tied_ad_core_tests.jl`, `M2_REPORT.md`, `M2_SU_FINDINGS.md`, and
-  `figures/m2_energy_convergence.svg`; local checkpoint and CSV artifacts under
-  `results/20260730-m2-chi8-warm-continue-77-to100/`.
-- **Acceptance:** using the accepted warm-started environment,
-  |E₀/N + 1| ≤ 1e-6 and every site-resolved |⟨Aₛ⟩−1| and |⟨B_p⟩−1| ≤ 1e-6;
-  E_cell ≥ −8−1e-6 and |⟨Aₛ⟩|,|⟨B_p⟩| ≤ 1+1e-6. Record a fresh χ=8 contraction of
-  the same tensor and require its energy/stabilizers to agree within 1e-6.
-- **Failure handling:** reject physical-bound violations; reduce the Armijo step after
-  a non-convergent trial environment; warm-start trial CTMRG from the accepted
-  environment; increase χ only after fixed-tensor diagnostics show that the smaller
-  environment is unreliable.
-- **Depends/status:** M0, M1 → **completed 2026-07-30**. The random-start step-86
-  tensor gives E_cell = −7.999999995072 (E/N = −0.999999999384), with maximum
-  star/plaquette errors 5.95e-10/6.38e-10 at χ=8. A fresh χ=8 contraction of the same
-  tensor differs in energy by 6.49e-9. The exact tensor is a separate stationary
-  benchmark. See `M2_REPORT.md` for the result and `M2_SU_FINDINGS.md` for the
-  superseded simple-update investigation.
+下一步沿 (0,h_z) 从 0 到 0.5 逐点延续，从零场经过已验证小场，再进入更大磁场。场间继承上一点张量，记录各点观测量、最终张量及环境收缩情况。若不同收缩得到不同结果，先查明原因，再决定提高 χ、更换环境算法或使用 AD。
 
-### M3 — Adiabatic ground states along `(0,h_z)` (workflow step 4)
-- **Purpose:** establish whether the accepted M2 dense tensor can support a bounded
-  finite-field continuation and a qualitative transition diagnostic.
-- **Tasks:** warm-start the tensor and environment from each field to the next; use
-  fixed-point AD with bounded Armijo trials; report fresh-environment observables;
-  plot only `m_z = Σ_i⟨Z_i⟩/N`; retain energy, stabilizers, and convergence metadata.
-- **Files/outputs:** `scripts/m3_hz_continuation.jl`, `tests/m3_hz_tests.jl`,
-  `M3_REPORT.md`, `figures/m3_mz_vs_hz_invalid.svg`, incremental CSV/JLD2 artifacts under
-  `tracks/peps/results/20260730-m3-hz-*/`.
-- **Acceptance:** continuation accepts updates through the grid, fresh and warm
-  contractions agree within the declared tolerance, operator bounds are respected,
-  `<B_p>` remains close to one, and the single diagnostic supports a coarse transition
-  interval.
-- **Failure/fallback:** record bounded non-convergence and stop; do not increase beyond
-  the approved `χ=6` fallback or turn the first pass into open-ended optimization.
-- **Depends/status:** M2 optimizer/environment machinery → **M3 UNCOMPLETED;
-  production acceptance not met**. `χ=4` was branch-unstable. The guarded
-  `χ=6` grid completed, but AD accepted no update at five positive-field points,
-  stabilizers overshot
-  physical bounds, and `m_z` showed no feature near `h_z≈0.33`. See `M3_REPORT.md`;
-  no transition estimate is accepted. A branch-consistent repair then produced smooth
-  energy descent and a decreasing gradient at `h_z=0.10`, but the final independent
-  multi-seed audit failed the declared operator bound
-  (`max|⟨B_p⟩|=1.000171798 > 1+10⁻⁶`). The chain and later stages were not run.
-  Completed exploratory runs and optimizer repairs are failure evidence, not M3
-  completion.
-- **2026-07-30 amendment (series-validation protocol).** A second session ratified
-  a small-field validation against the hₓ=0 series expansion
-  (e_series(h_z) = −1 − h_z²/4 − 15h_z⁴/64 − 147h_z⁶/256 − 18003h_z⁸/8192 per edge
-  spin; arXiv:0807.0487 Eq. 8 with e_ours(h) = 2 e_paper(h/2)): tensor-only
-  continuation from the M2 step-86 anchor, no optimizer state across fields,
-  frozen-tensor multi-initialization CTMRG audit (warm + fresh deterministic +
-  ≥2 fresh random, same χ/tol) plus a χ-increase stability check, acceptance only
-  on stationary optimizer + branch consistency + χ stability. The h_z=0 anchor was
-  accepted (δ = −1.95e-10 vs series); h_z=0.05/0.10 were flagged
-  contraction-ambiguous after the warm CTMRG branch drifted to a trivial
-  factorizing fixed point (artifact descent to −8−8h_z, stabilizers > 1) while
-  fresh branches stayed physical — the same disease as the χ=4/6 pass, now caught
-  quantitatively (`M3_REPORT.md` §Series-Validation Pilot). Ratified optimizer
-  amendments: **A1** α₀=0.005 with fresh-verified acceptance (ran; warm-trial
-  fragility found); **A2** from-scratch deterministic trial objective + fresh
-  random-seed veto (implemented and unit-tested; unexecuted at the deadline).
-  h_z=0.10 deferred until 0.05 passes. Next-session commands:
-  `CHALLENGE_SUMMARY.md` §6.
+文献临界场约为 0.3285（Trebst 2007、Dusuel 2011、Wu–Deng–Prokof'ev 2012）。临界附近根据实际误差调整场点密度及 D/χ，先确定这一条主轴路径上的变化范围。
 
-### M4 — Phase-line check (workflow step 5, MVP scope)
-- **Purpose:** locate and honestly report the transition on the MVP path.
-- **Tasks:** transition window from E/N(h), ⟨X⟩(h) (optionally a fidelity/dE proxy);
-  compare with h_c ≈ 0.3285. Finite-(D, χ) rounding turns the divergence into a
-  crossover — report a **window**, no critical-exponent claims.
-- **Files/outputs:** analysis inside the M3 driver or `scripts/phase_line.jl`;
-  figure data for F1.
-- **Acceptance:** window stated with D, χ provenance; literature comparison stated.
-- **Failure/fallback:** window too wide → report as-is with provenance; do not densify
-  h beyond the budget.
-- **Depends/status:** accepted M3 ground-state path → **blocked by the inconclusive
-  M3 first pass**. Do not interpret the current `m_z` curve as a phase boundary.
+## 4. 施加虚拟 Z₂ 约束后重新验证基态
 
-### M5 — Anyon spectra and correlators (workflow step 6, the challenge content)
-- **Purpose:** deliver Cₑ(r), Cₘ(r), ξₑ(h), ξₘ(h) along the path.
-- **Tasks:** build 𝕋₍₀₎, 𝕋₍₁₎ and sector-resolved 𝕋₍g,α₎ from each optimized state
-  (PEPSKit CTMRG edge tensors, or MPSKit leading boundary of the uniform-MPS form);
-  sector spectra; endpoint form factors F_a; λ_a per §3 (form-factor selection);
-  ξ_a(h); explicit two-endpoint insertion cross-checks at accessible r; V1 floor at
-  h=0; V2 assignment along the path; boundary fixed-point symmetry pattern recorded
-  (§4.4) as the condensation diagnostic; optional V3.
-- **Files/outputs:** `scripts/anyon_spectra.jl`; `spectra_<h>.csv` per sector;
-  `formfactors.csv`; `xi_vs_h.csv`; `correlators_<h>.csv`; run log.
-- **Acceptance:** V1 floor documented; V2 outcome recorded; spectral C_a(r) consistent
-  with explicit insertions at accessible r; ξ_e(h), ξ_m(h) delivered with D, χ
-  provenance.
-- **Failure/fallback:** leading-state form factor zero → next eigenstate (by
-  definition, §3); nonsymmetric eigensolver mixing → rely on graded sector blocks;
-  ξ floor too high → tighten the symmetry-preserving h=0 anchor (§5); V2
-  reversed → swap labels, record.
-- **Depends/status:** M2 (optimizer/environment machinery), M3 (symmetry-preserving
-  states) → **pending**. Transfer-spectrum and VUMPS cross-checks begin here as part
-  of sector validation; they were not M2 acceptance gates.
+**状态：已有解析对称张量和早期 graded 实现，完整验证尚未完成。**
 
-### M6 — Handoff
-- **Purpose:** submission-ready run.
-- **Tasks:** finalize run.json (reproduce-paper schema); figures
-  **F1** E/N(h), ⟨X⟩(h) with transition window · **F2** 4-panel (g, α) sector spectra
-  at representative h · **F3** semilog Cₑ(r), Cₘ(r) · **F4** ξₑ(h), ξₘ(h) with
-  h_c ≈ 0.328 marked; then `/challenge-report`; PR #185 accumulates all commits.
-- **Files/outputs:** `results/<run>/run.json`; F1–F4 (PDF/PNG) in the results dir.
-- **Acceptance:** report renders and the PR contains the reviewed scripts, data
-  provenance, and figures.
-- **Failure/fallback:** time overrun → deliver F1–F4 + report; D=4, diagonal path,
-  3×3/duality checks remain stretch.
-- **Depends/status:** M2–M5 → **pending**.
+先对零场，再对三个已验证弱场点，在保持虚拟 Z₂ 的张量参数化内重新优化。每次更新保持对应的对称关系，比较约束前后的能量、磁化、稳定子与收缩稳定性，确认加入约束后仍达到目标精度。
 
-## 7. Settled scope exclusions (do not reopen)
+对当前 D=2 解析 composite tensor，虚拟表示取 Z=diag(1,−1)，满足 Z⊗Z⊗Z⊗Z·T=T。按上述 X-basis copy，单腿关系为 ZₑT=X_pE T、ZₙT=X_pN T。这些关系先用于解析张量检查，再确定有限场张量应保持的关系。
 
-Diagonal (h, h) path and the 0.418(2) multicritical point; full (hₓ, h_z) phase map
-(F5); critical exponents / finite-entanglement scaling; mandatory D ≥ 4; 3×3 ED and
-TFIM-duality as required tests; controlling the topological sector; imposing any
-symmetry on transfer-matrix boundary fixed points; nonsymmetric tensors in the
-production path.
+分别检查 Z₂ 分块存储、局部张量的虚拟对称性和 transfer matrix 边界解的对称性。前两项描述张量构造；边界是否自发破缺由计算结果判断。
 
-## 8. Milestone state and compute policy
+## 5. 构造 PEPS transfer matrix
 
-- M0 completed 2026-07-27; M1 completed 2026-07-28; M2 completed 2026-07-30.
-- M3 remains uncompleted after a bounded dense-tensor attempt and repair point failed
-  production acceptance; M4–M6 remain pending. A second-session series-validation
-  pilot (2026-07-30) accepted the h_z=0 anchor but flagged h_z=0.05/0.10 as
-  contraction-ambiguous; the diagnosed optimizer amendments A1/A2 and the prepared
-  relaunch are recorded in `M3_REPORT.md` and `CHALLENGE_SUMMARY.md` §6.
-  **Challenge closed at the deadline with status M3/6 uncompleted.**
-- Before each future numerical milestone, confirm the Hamiltonian, lattice, boundary,
-  ansatz/symmetry, target observable, system size, and local-versus-cluster cost.
-- Future scripts must flush progress and write results incrementally per field point.
+**状态：已有普通 double-layer 和 boundary-MPS 求解基础；所需完整普通/扭转转移算符及其校准仍未完成。**
+
+先用解析零场 PEPS，将 ket 与 bra 的物理腿收缩，形成 double-layer local tensor ΣₚTᵖ⊗T̄ᵖ。按行或列构造转移算符，虚拟 double-layer bond 为 D²；明确一个转移步跨越多少物理格距，以及边界、归一化和左右特征向量的约定。
+
+`simple-update/loop/vumps_core.jl` 已有 row MPO 和非 Hermitian 正反向边界求解，可作为实现参考。本步骤求解二维 PEPS 的转移算符，边界 MPS 用于表示其边界解。
+
+在零场检查正确后，再使用第 4 步得到的对称有限场张量。若要研究虚拟通量，还需实现并检查插入虚拟字符串后的扭转算符，验证字符串位置的等价关系所依赖的局部张量条件。
+
+## 6. 求 spectrum 并划分 sectors
+
+**状态：尚未完成。**
+
+根据转移算符保持的虚拟对称性，分别求各 sector 的特征值和特征向量，记录本征方程残差与谱简并。用是否插入通量字符串和 Z₂ 奇偶共同划分四类，暂定 1=(0,+)、e=(0,−)、m=(1,+)、ε=(1,−)，再用解析态和物理算符检查这些标签。
+
+结合物理算符检查单轴场下的 e/m 对应：hₓ作用于 plaquette 违例，h_z作用于 star 违例。同时记录有限场的边界简并和对称性破缺。
+
+## 后续：任意子关联函数与相变
+
+在上述定义和谱计算可靠后，计算端点算符及 form factor，确定参与 Cₑ(r)、Cₘ(r) 的特征态。关联长度取具有非零谱权重的相应特征值：ξ_a=ℓ/ln|λ₀/λ_a|，ℓ为一次转移的物理步长。必要时与显式两端点插入比较。
+
+零场分别定义并检查局域关联、connected correlator 和任意子字符串量。最终得到有限场关联函数、关联长度及其随磁场的变化。
+
+## 结果记录和资源
+
+每次计算保存场点、D/χ、张量表示、共享方式、初态、算法、数值容差、停止原因、逐步观测量和最终张量。SU 与 AD 分别存放，结果表注明是否达到目标精度。
+
+长任务在运行前估计时间和内存，运行时持续输出进度、增量保存数据。计算资源和具体设置随下一项任务确定。
