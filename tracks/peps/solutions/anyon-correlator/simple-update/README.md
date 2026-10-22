@@ -4,6 +4,7 @@
 
 | 目录 | 实现 | 结果与用途 |
 |---|---|---|
+| [one-site-su/](one-site-su/README.md) | 共享一组 V/P/λ，保持1-site平移不变性、V的90°旋转和P的端点交换关系 | 当前单组参数零场结果：D=2、随机seed=5，700轮后e=−1；多起点收敛尚待检查 |
 | [merged/](merged/README.md) | 七月一般 merged PEPS，L 形三站点 SU | 随机 seed1 停在 e≈−0.7533；用于重放旧停滞与门检查 |
 | [split/](split/README.md) | 十月 D=2 V/P/λ；同一个 star 更新下比较 path-SU 和 loop/cluster | path 在所测轨迹未成功；loop 从同一随机态成功得到零场基态 |
 | [loop/](loop/README.md) | 一般 D 的 loop 实现，含磁场门 | 三个弱场点、D=2/3/4 的结果和限制；当前有限场主要程序 |

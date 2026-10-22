@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="380" viewBox="0 0 820 380">
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="sans-serif" font-size="13" fill="#222">
+<text x="90" y="25" font-size="18">One V/P/lambda: D=2, random seed 5</text>
+<text x="90" y="368">SU sweep (errors below 1e-14 shown at plotting floor)</text>
+<text x="12" y="37">max stabilizer error</text>
+<line x1="90" y1="315.00" x2="600" y2="315.00" stroke="#ddd"/>
+<text x="82" y="319.00" text-anchor="end">1e-15.1</text>
+<line x1="90" y1="261.00" x2="600" y2="261.00" stroke="#ddd"/>
+<text x="82" y="265.00" text-anchor="end">1e-11.9</text>
+<line x1="90" y1="207.00" x2="600" y2="207.00" stroke="#ddd"/>
+<text x="82" y="211.00" text-anchor="end">1e-8.6</text>
+<line x1="90" y1="153.00" x2="600" y2="153.00" stroke="#ddd"/>
+<text x="82" y="157.00" text-anchor="end">1e-5.3</text>
+<line x1="90" y1="99.00" x2="600" y2="99.00" stroke="#ddd"/>
+<text x="82" y="103.00" text-anchor="end">1e-2.1</text>
+<line x1="90" y1="45.00" x2="600" y2="45.00" stroke="#ddd"/>
+<text x="82" y="49.00" text-anchor="end">1e1.2</text>
+<line x1="90" y1="163.99" x2="600" y2="163.99" stroke="#111" stroke-dasharray="5 4"/>
+<polyline points="90.00,63.62 162.86,88.42 235.71,139.10 308.57,188.42 381.43,237.71 454.29,286.92 527.14,296.38 600.00,296.38" fill="none" stroke="#176b9a" stroke-width="2"/>
+<circle cx="90.00" cy="63.62" r="3" fill="#176b9a"/>
+<circle cx="162.86" cy="88.42" r="3" fill="#176b9a"/>
+<circle cx="235.71" cy="139.10" r="3" fill="#176b9a"/>
+<circle cx="308.57" cy="188.42" r="3" fill="#176b9a"/>
+<circle cx="381.43" cy="237.71" r="3" fill="#176b9a"/>
+<circle cx="454.29" cy="286.92" r="3" fill="#176b9a"/>
+<circle cx="527.14" cy="296.38" r="3" fill="#176b9a"/>
+<circle cx="600.00" cy="296.38" r="3" fill="#176b9a"/>
+<text x="612" y="45" fill="#176b9a">star, chi=8</text>
+<polyline points="90.00,65.69 162.86,137.13 235.71,173.69 308.57,222.76 381.43,272.05 454.29,296.38 527.14,296.38 600.00,296.38" fill="none" stroke="#c34b22" stroke-width="2"/>
+<circle cx="90.00" cy="65.69" r="3" fill="#c34b22"/>
+<circle cx="162.86" cy="137.13" r="3" fill="#c34b22"/>
+<circle cx="235.71" cy="173.69" r="3" fill="#c34b22"/>
+<circle cx="308.57" cy="222.76" r="3" fill="#c34b22"/>
+<circle cx="381.43" cy="272.05" r="3" fill="#c34b22"/>
+<circle cx="454.29" cy="296.38" r="3" fill="#c34b22"/>
+<circle cx="527.14" cy="296.38" r="3" fill="#c34b22"/>
+<circle cx="600.00" cy="296.38" r="3" fill="#c34b22"/>
+<text x="612" y="65" fill="#c34b22">plaquette, chi=8</text>
+<polyline points="600.00,296.38" fill="none" stroke="#237b41" stroke-width="2"/>
+<circle cx="600.00" cy="296.38" r="3" fill="#237b41"/>
+<text x="612" y="85" fill="#237b41">star, chi=16</text>
+<polyline points="600.00,296.38" fill="none" stroke="#8c45a6" stroke-width="2"/>
+<circle cx="600.00" cy="296.38" r="3" fill="#8c45a6"/>
+<text x="612" y="105" fill="#8c45a6">plaquette, chi=16</text>
+</g></svg>
