@@ -9,6 +9,8 @@ for (name, file) in [
     (:SplitSUChecks, "simple-update/split/tests.jl"),
     (:LoopChecks, "simple-update/loop/tests.jl"),
     (:StrictOneSiteChecks, "simple-update/one-site-su/strict_tests.jl"),
+    (:Z2OneSiteChecks, "simple-update/one-site-z2-su/tests.jl"),
+    (:TransferNetworkChecks, "transfer-spectrum/tests.jl"),
     (:BoundaryChecks, "simple-update/loop/vumps_tests.jl"),
     (:SplitADChecks, "ad/split/tests.jl"),
     (:GradientChecks, "ad/split/gradient_tests.jl"),
